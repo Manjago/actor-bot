@@ -6,7 +6,7 @@
 
 - [x] Maven-проект, Java 25, структура пакетов (`engine`, `telegram`, `game`).
 - [x] `pom.xml` с зависимостями: MVStore, JSON-парсер (jackson), Logback.
-- [ ] Лицензия MIT
+- [x] Лицензия MIT
 - [x] `.gitignore`
 - [x] README
 - [x] Пустой `main()`, который стартует и останавливается.
