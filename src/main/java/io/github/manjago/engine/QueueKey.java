@@ -27,12 +27,6 @@ public record QueueKey(long timestamp, UUID uuid) implements Comparable<QueueKey
         return this.uuid.compareTo(o.uuid);
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass())
-            return false;
-        QueueKey that = (QueueKey) o;
-        return this.compareTo(that) == 0;
-    }
+    // equals и hashCode не переопределяю - они согласованы с compareTo
 
 }
