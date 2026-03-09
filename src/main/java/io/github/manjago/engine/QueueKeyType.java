@@ -22,9 +22,9 @@ public class QueueKeyType extends BasicDataType<QueueKey> {
     // Запись ОДНОГО объекта
     @Override
     public void write(WriteBuffer buff, QueueKey obj) {
-        buff.putLong(obj.timestamp);
-        buff.putLong(obj.uuid.getMostSignificantBits());
-        buff.putLong(obj.uuid.getLeastSignificantBits());
+        buff.putLong(obj.timestamp());
+        buff.putLong(obj.uuid().getMostSignificantBits());
+        buff.putLong(obj.uuid().getLeastSignificantBits());
     }
 
     // Чтение ОДНОГО объекта
