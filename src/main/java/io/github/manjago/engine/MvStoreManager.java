@@ -21,7 +21,7 @@ public class MvStoreManager implements AutoCloseable {
 
     public MvStoreManager(@NotNull Path fullPath) {
         try {
-            Files.createDirectories(fullPath);
+            Files.createDirectories(fullPath.getParent());
         } catch (IOException e) {
             throw new PanicException("Fail create '" + fullPath + "' for MVStore", e);
         }
