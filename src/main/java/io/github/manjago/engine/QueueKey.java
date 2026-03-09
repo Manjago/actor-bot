@@ -1,5 +1,6 @@
 package io.github.manjago.engine;
 
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
@@ -13,8 +14,9 @@ public record QueueKey(long timestamp, UUID uuid) implements Comparable<QueueKey
         this(instant.toEpochMilli(), uuid);
     }
 
+    @Contract(pure = true)
     @Override
-    public int compareTo(QueueKey o) {
+    public int compareTo(@NotNull QueueKey o) {
         // Сначала сортируем по времени
         int timeCmp = Long.compare(this.timestamp, o.timestamp);
         if (timeCmp != 0)
