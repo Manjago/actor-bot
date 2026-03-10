@@ -15,34 +15,54 @@ public abstract class Actor {
     private final Clock clock;
     private final MvStoreManager mvStoreManager;
 
-    protected Actor(@NotNull MVMap<QueueKey, String> mailbox, @NotNull Clock clock, @NotNull MvStoreManager mvStoreManager) {
+    protected Actor(@NotNull MVMap<QueueKey, String> mailbox,
+            @NotNull Clock clock,
+            @NotNull MvStoreManager mvStoreManager) {
         this.mailbox = mailbox;
         this.clock = clock;
         this.mvStoreManager = mvStoreManager;
     }
 
     public void mainLoop() {
-        while(!Thread.interrupted()) {
+        while (!Thread.interrupted()) {
+
             final Instant now = Instant.now(clock);
-            final QueueKey firstKey = mailbox.firstKey();
-            if (firstKey == null) {
-                // пусто — спим бессрочно, unpark разбудит или сами встанем
-                park();
-            } else if (firstKey.timestamp() <= now.toEpochMilli()) {
-                // обрабатываем
-                // timestamp положили с правильным clock! Ответственность за правильность - на кладущем
-                mvStoreManager.runInTransaction(transaction -> {
-                    process(mailbox.get(firstKey), transaction);
+            final LoopResult result = mvStoreManager.runInTransactionWithResult(tx -> {
+                final QueueKey firstKey = mailbox.firstKey();
+
+                if (firstKey == null) {
+                    return LoopResult.Empty.INSTANCE;
+                } else if (firstKey.timestamp() <= now.toEpochMilli()) {
+                    process(mailbox.get(firstKey), tx);
                     mailbox.remove(firstKey);
-                });
-            } else {
-                // спим до этого времени, если что - нам скажут unpark и разбудят
-                parkUntil(firstKey.timestamp());
+                    return LoopResult.ProcessNow.INSTANCE;
+                } else {
+                    return new LoopResult.SleepUntil(firstKey.timestamp());
+                }
+            });
+
+
+            // паркуемся уже вне транзакции — правильно
+            switch (result) {
+                case LoopResult.Empty _ -> park(); //пусто — спим бессрочно, unpark разбудит или сами встанем
+                case LoopResult.ProcessNow _ -> {
+                    // уже обработали, сразу на следующую итерацию
+                }
+                case LoopResult.SleepUntil(long timestampMs) ->
+                        parkUntil(timestampMs); // спим до этого времени, если что - нам скажут unpark и разбудят
             }
-
-
         }
     }
 
     abstract void process(@NotNull String payload, @NotNull Transaction transaction);
+
+    sealed interface LoopResult permits LoopResult.Empty, LoopResult.ProcessNow, LoopResult.SleepUntil {
+
+        enum Empty implements LoopResult {INSTANCE}
+
+        enum ProcessNow implements LoopResult {INSTANCE}
+
+        record SleepUntil(long timestampMs) implements LoopResult {
+        }
+    }
 }
