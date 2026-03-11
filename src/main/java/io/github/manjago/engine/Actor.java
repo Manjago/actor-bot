@@ -1,7 +1,8 @@
 package io.github.manjago.engine;
 
-import org.h2.mvstore.MVMap;
 import org.h2.mvstore.tx.Transaction;
+import org.h2.mvstore.tx.TransactionMap;
+import org.h2.mvstore.type.StringDataType;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Clock;
@@ -11,14 +12,14 @@ import static java.util.concurrent.locks.LockSupport.park;
 import static java.util.concurrent.locks.LockSupport.parkUntil;
 
 public abstract class Actor {
-    private final MVMap<QueueKey, String> mailbox;
+    private final String mailboxName;
     private final Clock clock;
     private final MvStoreManager mvStoreManager;
 
-    protected Actor(@NotNull MVMap<QueueKey, String> mailbox,
+    protected Actor(@NotNull String mailboxName,
             @NotNull Clock clock,
             @NotNull MvStoreManager mvStoreManager) {
-        this.mailbox = mailbox;
+        this.mailboxName = mailboxName;
         this.clock = clock;
         this.mvStoreManager = mvStoreManager;
     }
@@ -28,6 +29,13 @@ public abstract class Actor {
 
             final Instant now = Instant.now(clock);
             final LoopResult result = mvStoreManager.runInTransactionWithResult(tx -> {
+
+                // 1) QueueKeyType -stateless, вызывать конструктор new QueueKeyType() - дешево, JIT оптимизирует
+                // 2) openMap внутри цикла — это дёшево, H2 кэширует map по имени внутри store, каждый раз новый объект не создаётся.
+                // 3) TransactionMap — это wrapper над MVMap с транзакционным контекстом, поэтому открывать его на каждой итерации из tx — правильный паттерн.
+                final TransactionMap<QueueKey, String> mailbox =
+                        tx.openMap(mailboxName, new QueueKeyType(), StringDataType.INSTANCE);
+
                 final QueueKey firstKey = mailbox.firstKey();
 
                 if (firstKey == null) {
