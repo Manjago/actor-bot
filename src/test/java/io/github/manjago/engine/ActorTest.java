@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +35,7 @@ class ActorTest {
             final Thread actorThread = Thread.ofVirtual()
                     .name("testactor-", 0)
                     .start(actor::mainLoop);
+            actorSystem.register(mailboxName, actorThread);
 
             await().atMost(5, TimeUnit.SECONDS)
                     .pollInterval(Duration.ofMillis(500))
@@ -56,11 +58,12 @@ class ActorTest {
 
             final List<String> collected = new CopyOnWriteArrayList<>();
             final Actor actor = new TestActor(mailboxName, mutableClock, mvStoreManager, collected);
-            actorSystem.send(mailboxName, "justPayload");
 
             final Thread actorThread = Thread.ofVirtual()
                     .name("testactor-", 0)
                     .start(actor::mainLoop);
+            actorSystem.register(mailboxName, actorThread);
+            actorSystem.send(mailboxName, "delay-after-30m", mutableClock.instant().plus(30, ChronoUnit.MINUTES));
 
             mutableClock.advance(Duration.ofHours(1));
             actorSystem.send(mailboxName, "wakeUp");
@@ -73,7 +76,7 @@ class ActorTest {
             actorThread.interrupt();
             actorThread.join(Duration.ofSeconds(5));
             assertFalse(actorThread.isAlive(), "Actor thread should have stopped");
-            assertEquals(List.of("justPayload", "wakeUp"), collected);
+            assertEquals(List.of("delay-after-30m", "wakeUp"), collected);
         }
     }
 

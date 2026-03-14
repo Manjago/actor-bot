@@ -24,6 +24,7 @@ public class ActorSystem {
 
     public void register(@NotNull String mailboxName, @NotNull Thread thread) {
         mailboxes.put(mailboxName, thread);
+        LockSupport.unpark(thread);
     }
 
     public void send(String mailboxName, String payload, Instant fireDate) {
