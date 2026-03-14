@@ -54,7 +54,7 @@ class ActorTest {
                     .name("testactor-", 0)
                     .start(actor::mainLoop);
 
-            assertTrue(processed.await(5, TimeUnit.SECONDS), "Messages were not processed in time");
+            assertTrue(processed.await(5, TimeUnit.SECONDS), "Messages were not processed in time, processed " + collected);
 
             actorThread.interrupt();
             actorThread.join(Duration.ofSeconds(5));
