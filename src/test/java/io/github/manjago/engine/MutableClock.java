@@ -36,8 +36,9 @@ public final class MutableClock extends Clock {
     @Override public Instant instant() { return instant.get(); }
     @Override public ZoneId getZone()  { return zone; }
 
+    @Contract("_ -> new")
     @Override
-    public Clock withZone(ZoneId zone) {
+    public @NotNull Clock withZone(ZoneId zone) {
         return new MutableClock(instant.get(), zone);
     }
 }
