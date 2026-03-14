@@ -9,6 +9,9 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -19,20 +22,31 @@ class ActorTest {
     @Test
     void simpleHappyWay(@TempDir Path tempDir) throws InterruptedException {
         final String mailboxName = "testactor:mailbox";
-        final Clock clock = MutableClock.of(Instant.now());
+        final MutableClock mutableClock = MutableClock.of(Instant.now());
 
         try(final MvStoreManager mvStoreManager = new MvStoreManager(tempDir.resolve("mvStore"))) {
-            final ActorSystem actorSystem = new ActorSystem(mvStoreManager, clock);
+            final ActorSystem actorSystem = new ActorSystem(mvStoreManager, mutableClock);
             actorSystem.send(mailboxName, "firstPayload");
+            mutableClock.advance(Duration.ofSeconds(1));
             actorSystem.send(mailboxName, "secondPayload");
 
             final CountDownLatch processed = new CountDownLatch(2);
+            final List<String> collected = new CopyOnWriteArrayList<>();
 
-            final TestActor actor = new TestActor(mailboxName, clock, mvStoreManager) {
+            final Actor actor = new Actor(mailboxName, mutableClock, mvStoreManager) {
+
                 @Override
                 void process(@NotNull String payload, @NotNull Transaction tx) {
-                    super.process(payload, tx);
+                    System.out.println("processing payload: " + payload);
+                    collected.add(payload);
                     processed.countDown();
+                }
+
+                @Override
+                public void mainLoop() {
+                    System.out.println( "main loop enter");
+                    super.mainLoop();
+                    System.out.println( "main loop exit");
                 }
             };
 
@@ -45,25 +59,7 @@ class ActorTest {
             actorThread.interrupt();
             actorThread.join(Duration.ofSeconds(5));
             assertFalse(actorThread.isAlive(), "Actor thread should have stopped");
-        }
-    }
-
-    static class TestActor extends Actor {
-
-        protected TestActor(@NotNull String mailboxName, @NotNull Clock clock, @NotNull MvStoreManager mvStoreManager) {
-            super(mailboxName, clock, mvStoreManager);
-        }
-
-        @Override
-        void process(@NotNull String payload, @NotNull Transaction transaction) {
-            System.out.println("processing payload: " + payload);
-        }
-
-        @Override
-        public void mainLoop() {
-            System.out.println( "main loop enter");
-            super.mainLoop();
-            System.out.println( "main loop exit");
+            assertEquals(List.of("firstPayload", "secondPayload"), collected);
         }
     }
 }
