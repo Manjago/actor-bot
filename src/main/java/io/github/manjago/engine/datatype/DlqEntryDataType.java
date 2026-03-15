@@ -3,10 +3,12 @@ package io.github.manjago.engine.datatype;
 import io.github.manjago.engine.DlqEntry;
 import org.h2.mvstore.type.StringDataType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class DlqEntryDataType extends JsonDataType<DlqEntry> {
 
     private static final StringDataType STRING_DATA_TYPE = new StringDataType();
+    private static final InstantDataType INSTANT_DATA_TYPE = new InstantDataType();
 
     public DlqEntryDataType() {
         super(DlqEntry.class);
@@ -26,15 +28,18 @@ public class DlqEntryDataType extends JsonDataType<DlqEntry> {
          */
 
         int size = 16;
-        size +=  STRING_DATA_TYPE.getMemory(obj.originalPayload());
-        size +=  STRING_DATA_TYPE.getMemory(obj.actorName());
-        size +=  STRING_DATA_TYPE.getMemory(obj.errorMessage());
-        size +=  STRING_DATA_TYPE.getMemory(obj.stackTrace());
-        size +=  8;
-        size +=  8;
+        size += getStringMemory(obj.originalPayload());
+        size += getStringMemory(obj.actorName());
+        size += getStringMemory(obj.errorMessage());
+        size += getStringMemory(obj.stackTrace());
+        size += INSTANT_DATA_TYPE.getMemory(obj.failedAt());
+        size += 4; // int attempts 4 байта
         return size;
     }
 
+    private int getStringMemory(@Nullable String str) {
+        return str != null ? STRING_DATA_TYPE.getMemory(str) : 0;
+    }
 
 
 }
