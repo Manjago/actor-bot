@@ -12,7 +12,6 @@ import static java.util.concurrent.locks.LockSupport.park;
 import static java.util.concurrent.locks.LockSupport.parkUntil;
 
 public abstract class Actor {
-    private static final String PROCESSED = "processed";
     private final String mailboxName;
     private final Clock clock;
     private final MvStoreManager mvStoreManager;
