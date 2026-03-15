@@ -50,9 +50,7 @@ public class RetryOrDlqLogic {
         mvStoreManager.runInTransaction(tx -> {
             final TransactionMap<QueueKey, String> mailbox = StoreSchema.openMailbox(tx, mailboxName);
             final String problemPayload = mailbox.get(key);
-            if (problemPayload != null) { // just simple defensive programming
-                mailbox.remove(key, problemPayload);
-            }
+            mailbox.remove(key);
             final TransactionMap<UUID, DlqEntry> dlq = StoreSchema.openDlq(tx);
             dlq.put(key.uuid(), new DlqEntry(
                     problemPayload,

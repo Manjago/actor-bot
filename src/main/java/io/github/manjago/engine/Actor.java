@@ -57,11 +57,12 @@ public abstract class Actor {
         }
     }
 
+    record FailureContext(QueueKey key) {
+    }
+
     @NotNull
     private LoopResult processOneEvent(Instant now) {
 
-        record FailureContext(QueueKey key, String payload) {
-        }
         final AtomicReference<FailureContext> failureRef = new AtomicReference<>();
 
         try {
@@ -73,7 +74,7 @@ public abstract class Actor {
                 if (firstKey == null) {
                     return LoopResult.Empty.INSTANCE;
                 } else if (firstKey.timestamp() <= now.toEpochMilli()) {
-                    return processOneEvent(tx, mailbox, firstKey) ? LoopResult.ProcessNow.INSTANCE :
+                    return processOneEvent(tx, mailbox, firstKey, failureRef) ? LoopResult.ProcessNow.INSTANCE :
                             LoopResult.Duplicate.INSTANCE;
                 } else {
                     return new LoopResult.SleepUntil(firstKey.timestamp());
@@ -101,13 +102,15 @@ public abstract class Actor {
 
     private boolean processOneEvent(@NotNull Transaction tx,
             @NotNull TransactionMap<QueueKey, String> mailbox,
-            @NotNull QueueKey firstKey) {
+            @NotNull QueueKey firstKey,
+            @NotNull AtomicReference<FailureContext> failureRef) {
         final TransactionMap<UUID, Instant> processed = StoreSchema.openProcessed(tx);
         final boolean result;
         // мы не запариваемся атомарностью, один актор с одним потоком, Check-And-Act можем
         if (processed.containsKey(firstKey.uuid())) {
             result = false;
         } else {
+            failureRef.set(new FailureContext(firstKey));
             process(mailbox.get(firstKey), tx);
             processed.put(firstKey.uuid(), Instant.now(clock));
             result = true;
