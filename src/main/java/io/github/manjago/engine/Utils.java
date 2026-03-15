@@ -1,13 +1,14 @@
 package io.github.manjago.engine;
 
+import io.github.manjago.engine.datatype.InstantDataType;
 import io.github.manjago.engine.datatype.QueueKeyType;
 import io.github.manjago.engine.datatype.UUIDDataType;
 import org.h2.mvstore.tx.Transaction;
 import org.h2.mvstore.tx.TransactionMap;
-import org.h2.mvstore.type.LongDataType;
 import org.h2.mvstore.type.StringDataType;
 import org.jetbrains.annotations.NotNull;
 
+import java.time.Instant;
 import java.util.UUID;
 
 public final class Utils {
@@ -23,8 +24,8 @@ public final class Utils {
         return tx.openMap(mailboxName, new QueueKeyType(), StringDataType.INSTANCE);
     }
 
-    public static TransactionMap<UUID, Long> openProcessed(@NotNull Transaction tx) {
-        return tx.openMap(PROCESSED, new UUIDDataType(), LongDataType.INSTANCE);
+    public static TransactionMap<UUID, Instant> openProcessed(@NotNull Transaction tx) {
+        return tx.openMap(PROCESSED, new UUIDDataType(), new InstantDataType());
     }
 
 }

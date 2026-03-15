@@ -2,11 +2,11 @@ package io.github.manjago.engine;
 
 import org.h2.mvstore.tx.Transaction;
 import org.h2.mvstore.tx.TransactionMap;
-import org.h2.mvstore.type.StringDataType;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.UUID;
 
 import static java.util.concurrent.locks.LockSupport.park;
 import static java.util.concurrent.locks.LockSupport.parkUntil;
@@ -36,9 +36,7 @@ public abstract class Actor {
                 if (firstKey == null) {
                     return LoopResult.Empty.INSTANCE;
                 } else if (firstKey.timestamp() <= now.toEpochMilli()) {
-                    process(mailbox.get(firstKey), tx);
-                    mailbox.remove(firstKey);
-                    return LoopResult.ProcessNow.INSTANCE;
+                    return process(tx, mailbox, firstKey) ? LoopResult.ProcessNow.INSTANCE : LoopResult.Duplicate.INSTANCE;
                 } else {
                     return new LoopResult.SleepUntil(firstKey.timestamp());
                 }
@@ -51,19 +49,39 @@ public abstract class Actor {
                 case LoopResult.ProcessNow _ -> {
                     // уже обработали, сразу на следующую итерацию
                 }
+                case LoopResult.Duplicate _ -> {
+                    // не обработали, потому что обрабатывали раньше, сразу на следующую итерацию
+                }
                 case LoopResult.SleepUntil(long timestampMs) ->
                         parkUntil(timestampMs); // спим до этого времени, если что - нам скажут unpark и разбудят
             }
         }
     }
 
+    private boolean process(@NotNull Transaction tx, @NotNull TransactionMap<QueueKey, String> mailbox, @NotNull QueueKey firstKey) {
+        final TransactionMap<UUID, Instant> processed = Utils.openProcessed(tx);
+        final boolean result;
+        // мы не запариваемся атомарностью, один актор с одним потоком, Check-And-Act можем
+        if (processed.containsKey(firstKey.uuid())) {
+            result = false;
+        } else {
+            process(mailbox.get(firstKey), tx);
+            processed.put(firstKey.uuid(), Instant.now(clock));
+            result = true;
+        }
+        mailbox.remove(firstKey);
+        return result;
+    }
+
     abstract void process(@NotNull String payload, @NotNull Transaction transaction);
 
-    sealed interface LoopResult permits LoopResult.Empty, LoopResult.ProcessNow, LoopResult.SleepUntil {
+    sealed interface LoopResult permits LoopResult.Duplicate, LoopResult.Empty, LoopResult.ProcessNow, LoopResult.SleepUntil {
 
         enum Empty implements LoopResult {INSTANCE}
 
         enum ProcessNow implements LoopResult {INSTANCE}
+
+        enum Duplicate implements LoopResult {INSTANCE}
 
         record SleepUntil(long timestampMs) implements LoopResult {
         }
