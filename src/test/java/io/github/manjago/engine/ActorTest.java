@@ -88,7 +88,7 @@ class ActorTest {
                 MutableClock mutableClock,
                 MvStoreManager mvStoreManager,
                 List<String> collected) {
-            super(mailboxName, mutableClock, mvStoreManager);
+            super(mailboxName, mutableClock, mvStoreManager, new RetryOrDlqLogic(mvStoreManager, mutableClock));
             this.collected = collected;
         }
 
