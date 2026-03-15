@@ -34,8 +34,8 @@
 
 ### Этап 4. Poison message + DLQ
 
-- [ ] Retry-счётчик (in-memory), порог — 3 попытки.
-- [ ] Перемещение в DLQ (отдельный MVMap).
+- [x] Retry-счётчик (in-memory), порог — 3 попытки.
+- [x] Перемещение в DLQ (отдельный MVMap).
 - [ ] Актор `dlq-monitor` с self-scheduling.
 - [ ] Тест: обработчик кидает исключение → 3 retry → сообщение в DLQ.
 
