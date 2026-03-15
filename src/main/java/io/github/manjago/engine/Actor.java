@@ -69,6 +69,9 @@ public abstract class Actor {
             processed.put(firstKey.uuid(), Instant.now(clock));
             result = true;
         }
+        // мы удаляем ключ всегда, обрабатывался ли он или пропущен из-за дедупликации
+        // данные для дедупликации НЕ ВЕЧНЫ, у них тоже есть свой срок жизни,
+        // не можем позволить себе ключам болтаться вечно
         mailbox.remove(firstKey);
         return result;
     }
