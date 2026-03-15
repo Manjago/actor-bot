@@ -28,7 +28,7 @@ public class ActorSystem {
     }
 
     public void send(String mailboxName, String payload, Instant fireDate) {
-        mvStoreManager.runInTransaction(tx -> tx.openMap(mailboxName, new QueueKeyType(), StringDataType.INSTANCE).put(new QueueKey(fireDate, UUID_GENERATOR.generate()), payload));
+        mvStoreManager.runInTransaction(tx -> Utils.openMailbox(tx, mailboxName).put(new QueueKey(fireDate, UUID_GENERATOR.generate()), payload));
         LockSupport.unpark(mailboxes.get(mailboxName));
     }
 

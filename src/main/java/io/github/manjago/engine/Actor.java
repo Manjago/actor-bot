@@ -12,6 +12,7 @@ import static java.util.concurrent.locks.LockSupport.park;
 import static java.util.concurrent.locks.LockSupport.parkUntil;
 
 public abstract class Actor {
+    private static final String PROCESSED = "processed";
     private final String mailboxName;
     private final Clock clock;
     private final MvStoreManager mvStoreManager;
@@ -30,12 +31,7 @@ public abstract class Actor {
             final Instant now = Instant.now(clock);
             final LoopResult result = mvStoreManager.runInTransactionWithResult(tx -> {
 
-                // 1) QueueKeyType -stateless, вызывать конструктор new QueueKeyType() - дешево, JIT оптимизирует
-                // 2) openMap внутри цикла — это дёшево, H2 кэширует map по имени внутри store, каждый раз новый объект не создаётся.
-                // 3) TransactionMap — это wrapper над MVMap с транзакционным контекстом, поэтому открывать его на каждой итерации из tx — правильный паттерн.
-                final TransactionMap<QueueKey, String> mailbox =
-                        tx.openMap(mailboxName, new QueueKeyType(), StringDataType.INSTANCE);
-
+                final TransactionMap<QueueKey, String> mailbox = Utils.openMailbox(tx, mailboxName);
                 final QueueKey firstKey = mailbox.firstKey();
 
                 if (firstKey == null) {
