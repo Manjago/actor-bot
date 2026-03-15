@@ -2,7 +2,6 @@ package io.github.manjago.engine;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
-import org.h2.mvstore.type.StringDataType;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Clock;
@@ -28,7 +27,7 @@ public class ActorSystem {
     }
 
     public void send(String mailboxName, String payload, Instant fireDate) {
-        mvStoreManager.runInTransaction(tx -> Utils.openMailbox(tx, mailboxName).put(new QueueKey(fireDate, UUID_GENERATOR.generate()), payload));
+        mvStoreManager.runInTransaction(tx -> StoreSchema.openMailbox(tx, mailboxName).put(new QueueKey(fireDate, UUID_GENERATOR.generate()), payload));
         LockSupport.unpark(mailboxes.get(mailboxName));
     }
 

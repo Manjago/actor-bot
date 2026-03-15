@@ -1,5 +1,6 @@
 package io.github.manjago.engine;
 
+import io.github.manjago.engine.datatype.DlqEntryDataType;
 import io.github.manjago.engine.datatype.InstantDataType;
 import io.github.manjago.engine.datatype.QueueKeyType;
 import io.github.manjago.engine.datatype.UUIDDataType;
@@ -11,9 +12,10 @@ import org.jetbrains.annotations.NotNull;
 import java.time.Instant;
 import java.util.UUID;
 
-public final class Utils {
+public final class StoreSchema {
     private static final String PROCESSED = "processed";
-    private Utils() {
+    private static final String DLQ = "dlq";
+    private StoreSchema() {
         // utility class
     }
 
@@ -26,6 +28,10 @@ public final class Utils {
 
     public static TransactionMap<UUID, Instant> openProcessed(@NotNull Transaction tx) {
         return tx.openMap(PROCESSED, new UUIDDataType(), new InstantDataType());
+    }
+
+    public static TransactionMap<UUID, DlqEntry> openDlq(@NotNull Transaction tx) {
+        return tx.openMap(DLQ, new UUIDDataType(), new DlqEntryDataType());
     }
 
 }

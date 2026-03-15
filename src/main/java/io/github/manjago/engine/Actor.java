@@ -30,7 +30,7 @@ public abstract class Actor {
             final Instant now = Instant.now(clock);
             final LoopResult result = mvStoreManager.runInTransactionWithResult(tx -> {
 
-                final TransactionMap<QueueKey, String> mailbox = Utils.openMailbox(tx, mailboxName);
+                final TransactionMap<QueueKey, String> mailbox = StoreSchema.openMailbox(tx, mailboxName);
                 final QueueKey firstKey = mailbox.firstKey();
 
                 if (firstKey == null) {
@@ -59,7 +59,7 @@ public abstract class Actor {
     }
 
     private boolean process(@NotNull Transaction tx, @NotNull TransactionMap<QueueKey, String> mailbox, @NotNull QueueKey firstKey) {
-        final TransactionMap<UUID, Instant> processed = Utils.openProcessed(tx);
+        final TransactionMap<UUID, Instant> processed = StoreSchema.openProcessed(tx);
         final boolean result;
         // мы не запариваемся атомарностью, один актор с одним потоком, Check-And-Act можем
         if (processed.containsKey(firstKey.uuid())) {
